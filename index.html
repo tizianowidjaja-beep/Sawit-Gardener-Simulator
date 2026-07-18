@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sawit Tycoon 2045</title>
+    <link href="https://googleapis.com" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background-color: #0b140d; color: #e0e7e1; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .game-container { width: 100%; max-width: 450px; background: linear-gradient(145deg, #112214, #0d1a10); border: 2px solid #00ff66; border-radius: 20px; padding: 25px; box-shadow: 0 0 25px rgba(0, 255, 102, 0.2); display: flex; flex-direction: column; gap: 30px; }
+        .game-header { display: flex; justify-content: space-between; align-items: center; }
+        .btn-back { background: none; border: 1px solid #527853; color: #a3b8a4; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+        .eco-score { font-family: 'Orbitron', sans-serif; color: #00ff66; font-weight: 700; }
+        .main-content { text-align: center; }
+        .game-title { font-family: 'Orbitron', sans-serif; font-size: 26px; letter-spacing: 2px; color: #ffffff; margin-bottom: 5px; }
+        .game-subtitle { font-size: 13px; color: #8da390; margin-bottom: 35px; }
+        .redeem-box { display: flex; flex-direction: column; gap: 15px; }
+        #redeem-input { width: 100%; background-color: #070d08; border: 1px solid #385e3c; border-radius: 12px; padding: 15px; color: #ffffff; font-family: 'Orbitron', sans-serif; font-size: 16px; text-align: center; letter-spacing: 3px; outline: none; }
+        #redeem-input:focus { border-color: #00ff66; box-shadow: 0 0 15px rgba(0, 255, 102, 0.3); }
+        #btn-claim { background: linear-gradient(90deg, #00cc52, #00ff66); color: #050a06; border: none; border-radius: 12px; padding: 16px; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; }
+        .message { margin-top: 25px; padding: 15px; border-radius: 12px; font-size: 13px; line-height: 1.5; display: none; }
+        .message.success { background-color: rgba(0, 255, 102, 0.1); border: 1px solid #00ff66; color: #66ff99; }
+        .message.error { background-color: rgba(255, 51, 51, 0.1); border: 1px solid #ff3333; color: #ff6666; }
+        .game-footer { border-top: 1px dashed #27422b; padding-top: 20px; }
+        .game-footer h3 { font-size: 13px; color: #ffffff; margin-bottom: 8px; }
+        .game-footer ul { list-style-position: inside; font-size: 12px; color: #7b947d; }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="game-header">
+            <button class="btn-back">← KEMBALI</button>
+            <div class="eco-score">🌿 Eco-Score: <span id="eco-val">95</span></div>
+        </div>
+
+        <div class="main-content">
+            <h1 class="game-title">🌴 SAWIT TYCOON 2045</h1>
+            <p class="game-subtitle">Klaim Kotak Angpao Digital Anda</p>
+
+            <div class="redeem-box">
+                <input type="text" id="redeem-input" placeholder="MASUKKAN KODE DI SINI">
+                <button id="btn-claim">KLAIM HADIAH</button>
+            </div>
+
+            <div id="notification-message" class="message"></div>
+        </div>
+
+        <div class="game-footer">
+            <h3>Aturan Klaim:</h3>
+            <ul>
+                <li>Satu kode hanya berlaku untuk 1 akun pemain.</li>
+                <li>Validasi kode diproses otomatis melalui jaringan cloud.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Menggunakan repositori publik tiruan yang sudah terisi data kode aktif
+        const GITHUB_CODE_URL = "https://typicode.com"; 
+
+        let claimedCodes = JSON.parse(localStorage.getItem('claimedCodes')) || [];
+
+        document.getElementById("btn-claim").addEventListener("click", async function() {
+            const inputField = document.getElementById("redeem-input");
+            const msgBox = document.getElementById("notification-message");
+            const ecoValSpan = document.getElementById("eco-val");
+            const kodeUser = inputField.value.trim().toUpperCase();
+
+            msgBox.style.display = "none";
+            msgBox.className = "message";
+
+            if (kodeUser === "") {
+                showMsg("Gagal: Kolom kode tidak boleh kosong!", "error");
+                return;
+            }
+
+            if (claimedCodes.includes(kodeUser)) {
+                showMsg("Gagal: Anda sudah pernah mengklaim kode ini!", "error");
+                return;
+            }
+
+            showMsg("Memverifikasi kode...", "success");
+
+            try {
+                const response = await fetch(GITHUB_CODE_URL);
+                if (!response.ok) throw new Error();
+                
+                const validCodes = await response.json();
+
+                // Mencari kode yang cocok di dalam array objek dari server
+                const dataHadiah = validCodes.find(item => item.id === kodeUser);
+
+                if (dataHadiah) {
+                    if (dataHadiah.ecoBoost && dataHadiah.ecoBoost > 0) {
+                        let currentEco = parseInt(ecoValSpan.innerText);
+                        ecoValSpan.innerText = currentEco + dataHadiah.ecoBoost;
+                    }
+
+                    claimedCodes.push(kodeUser);
+                    localStorage.setItem('claimedCodes', JSON.stringify(claimedCodes));
+
+                    showMsg(`Sukses! Hadiah Berhasil Dikirim:<br><strong>🎁 ${dataHadiah.reward}</strong>`, "success");
+                    inputField.value = "";
+                } else {
+                    showMsg("Gagal: Kode salah atau sudah kedaluwarsa!", "error");
+                }
+
+            } catch (error) {
+                // Jalur cadangan (offline fallback) jika koneksi server sedang bermasalah
+                if (kodeUser === "SAWITKEREN2045") {
+                    claimedCodes.push("SAWITKEREN2045");
+                    localStorage.setItem('claimedCodes', JSON.stringify(claimedCodes));
+                    showMsg("Sukses (Mode Cadangan)! Hadiah Berhasil Dikirim:<br><strong>🎁 1x Nusantara Exo-Suit & 2.045 Golden Seeds!</strong>", "success");
+                    inputField.value = "";
+                } else {
+                    showMsg("Gagal: Kode salah atau periksa koneksi internet Anda!", "error");
+                }
+            }
+        });
+
+        function showMsg(text, type) {
+            const msgBox = document.getElementById("notification-message");
+            msgBox.innerHTML = text;
+            msgBox.className = `message ${type}`;
+            msgBox.style.display = "block";
+        }
+    </script>
+</body>
+</html>
